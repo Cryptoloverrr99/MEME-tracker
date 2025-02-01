@@ -2,8 +2,8 @@ import time
 import requests
 
 # API URLs
-DEXSCREENER_API_URL = "https://api.dexscreener.com/token-boosts/latest/v1"
-RUGCHECKER_API_URL = "https://api.rugchecker.com/risk/{token_address}"
+DEXSCREENER_API_URL = "https://api.dexscreener.com/latest/dex/pairs?q=all"
+RUGCHECKER_API_URL = "https://api.rugdoc.io/v2/project/{token_address}"
 TELEGRAM_API_URL = "https://api.telegram.org/bot{TOKEN}/sendMessage"
 
 # Configuration de l'alerte Telegram
