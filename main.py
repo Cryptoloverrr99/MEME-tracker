@@ -19,8 +19,8 @@ logging.basicConfig(
 
 # Fonction pour envoyer un message via Telegram
 def send_telegram_message(message):
-    url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
-    payload = {"chat_id": TELEGRAM_CHAT_ID, "text": message}
+    url = f"https://api.telegram.org/bot{8048350512:AAGVN4uZEt_D1q-ycNN6jhRo-PMn64ZHgiI}/sendMessage"
+    payload = {"chat_id": 1002359674981, "text": message}
     try:
         response = requests.post(url, data=payload)
         response.raise_for_status()
@@ -30,7 +30,7 @@ def send_telegram_message(message):
 
 # Exemple de fonction pour récupérer les données de Dexscreener (à adapter selon la documentation réelle)
 def check_dexscreener():
-    url = "https://api.dexscreener.com/latest/dex/tokens"
+    url = "https://api.dexscreener.com/tokens/v1/{chainId}/{tokenAddresses}"
     params = {"api_key": DEXSCREENER_API_KEY}
     try:
         response = requests.get(url, params=params)
@@ -44,7 +44,7 @@ def check_dexscreener():
 
 # Exemple de fonction pour récupérer les données de RugChecker
 def check_rugchecker():
-    url = "https://api.rugchecker.com/check"  # URL fictive, à adapter
+    url = "rugcheck_api.Risk"  # URL fictive, à adapter
     params = {"api_key": RUGCHECKER_API_KEY}
     try:
         response = requests.get(url, params=params)
