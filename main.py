@@ -3,7 +3,7 @@ import logging
 
 logging.basicConfig(level=logging.INFO)
 
-DEXSCREENER_API_URL = "https://api.dexscreener.io/latest/dex/tokens"
+DEXSCREENER_API_URL = "https://api.dexscreener.com/token-boosts/latest/v1"
 RUGCHECKER_API_URL = "https://api.rugchecker.com/check"
 
 # Paramètres de Telegram
