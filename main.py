@@ -1,146 +1,97 @@
 import requests
-import time
 import logging
-from config import (
-    DEXSCREENER_API_KEY,
-    RUGCHECKER_API_KEY,
-    BUBBLEMAP_API_KEY,
-    TWITTER_API_KEY,
-    TELEGRAM_BOT_TOKEN,
-    TELEGRAM_CHAT_ID
-)
 
-# Configuration du module logging pour afficher infos et erreurs dans la console
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s',
-    handlers=[logging.StreamHandler()]
-)
+logging.basicConfig(level=logging.INFO)
 
-# Fonction pour envoyer un message via Telegram
-def send_telegram_message(message):
-    url = f"https://api.telegram.org/bot{8048350512:AAGVN4uZEt_D1q-ycNN6jhRo-PMn64ZHgiI}/sendMessage"
-    payload = {"chat_id": 1002359674981, "text": message}
+DEXSCREENER_API_URL = "https://api.dexscreener.io/latest/dex/tokens"
+RUGCHECKER_API_URL = "https://api.rugchecker.com/check"
+
+def get_dexscreener_data():
     try:
-        response = requests.post(url, data=payload)
+        response = requests.get(DEXSCREENER_API_URL)
         response.raise_for_status()
-        logging.info("Notification Telegram envoyée.")
+        return response.json().get("data", [])
     except Exception as e:
-        logging.error("Erreur lors de l'envoi de la notification Telegram : %s", e)
+        logging.error(f"Erreur lors de la récupération des données Dexscreener : {e}")
+        return []
 
-# Exemple de fonction pour récupérer les données de Dexscreener (à adapter selon la documentation réelle)
-def check_dexscreener():
-    url = "https://api.dexscreener.com/tokens/v1/{chainId}/{tokenAddresses}"
-    params = {"api_key": DEXSCREENER_API_KEY}
+def get_rugchecker_data(token_address):
     try:
-        response = requests.get(url, params=params)
+        response = requests.get(f"{RUGCHECKER_API_URL}?token={token_address}")
         response.raise_for_status()
-        data = response.json()
-        logging.info("Données Dexscreener récupérées.")
-        return data
+        return response.json()
     except Exception as e:
-        logging.error("Erreur lors de la récupération des données Dexscreener : %s", e)
+        logging.error(f"Erreur lors de la récupération des données RugChecker : {e}")
         return {}
 
-# Exemple de fonction pour récupérer les données de RugChecker
-def check_rugchecker():
-    url = "rugcheck_api.Risk"  # URL fictive, à adapter
-    params = {"api_key": RUGCHECKER_API_KEY}
-    try:
-        response = requests.get(url, params=params)
-        response.raise_for_status()
-        data = response.json()
-        logging.info("Données RugChecker récupérées.")
-        return data
-    except Exception as e:
-        logging.error("Erreur lors de la récupération des données RugChecker : %s", e)
-        return {}
-
-# Exemple de fonction pour récupérer les données de Bubblemap
-def check_bubblemap():
-    url = "https://api.bubblemap.com/check"  # URL fictive, à adapter
-    params = {"api_key": BUBBLEMAP_API_KEY}
-    try:
-        response = requests.get(url, params=params)
-        response.raise_for_status()
-        data = response.json()
-        logging.info("Données Bubblemap récupérées.")
-        return data
-    except Exception as e:
-        logging.error("Erreur lors de la récupération des données Bubblemap : %s", e)
-        return {}
-
-# Exemple de fonction pour récupérer les données de Twitter (social score)
-def check_twitter_social_score():
-    url = "https://api.twitter.com/2/tweets"  # URL fictive, à adapter selon la documentation
-    headers = {"Authorization": f"Bearer {TWITTER_API_KEY}"}
-    try:
-        response = requests.get(url, headers=headers)
-        response.raise_for_status()
-        data = response.json()
-        logging.info("Données Twitter récupérées.")
-        return data
-    except Exception as e:
-        logging.error("Erreur lors de la récupération des données Twitter : %s", e)
-        return {}
-
-# Traitement des données et vérification de chaque condition
 def check_conditions():
-    conditions_valides = True
+    # Récupération des données Dexscreener
+    dexscreener_data = get_dexscreener_data()
+    if not dexscreener_data:
+        return False
 
-    # Récupération des données
-    dexscreener_data = check_dexscreener()
-    rugchecker_data = check_rugchecker()
-    bubblemap_data = check_bubblemap()
-    twitter_data = check_twitter_social_score()
+    # Vérification des conditions Dexscreener
+    market_cap = dexscreener_data[0].get("marketCap", 0)
+    volume_1h = dexscreener_data[0].get("volume", {}).get("1h", 0)
+    transactions = dexscreener_data[0].get("txns", {}).get("count", 0)
+    holders = dexscreener_data[0].get("holders", 0)
+    dex_paid = dexscreener_data[0].get("dexPaid", False)
+    trending_rank = dexscreener_data[0].get("trendingRank", 999)
 
-    # --- Vérifications d'exemple (à adapter selon le retour réel des APIs) ---
-
-    # 1. Vérifier le MarketCap (exemple depuis Dexscreener)
-    market_cap = dexscreener_data.get("marketCap", 0)
     if market_cap < 200000:
-        conditions_valides = False
-
-    # 2. Vérifier le volume sur 1h
-    volume_1h = dexscreener_data.get("volume1h", 0)
+        logging.info("MarketCap inférieur au seuil requis.")
+        return False
     if volume_1h < 1000000:
-        conditions_valides = False
-
-    # 3. Vérifier le nombre de holders
-    holders = dexscreener_data.get("holders", 0)
+        logging.info("Volume 1h inférieur au seuil requis.")
+        return False
+    if transactions < 5000:
+        logging.info("Nombre de transactions insuffisant.")
+        return False
     if holders < 500:
-        conditions_valides = False
+        logging.info("Nombre de holders insuffisant.")
+        return False
+    if not dex_paid:
+        logging.info("Token non payé sur Dex.")
+        return False
+    if trending_rank > 10:
+        logging.info("Le token n'est pas dans le top 10 sur Dexscreener.")
+        return False
 
-    # 4. Vérifier Dev Holding via RugChecker (en pourcentage)
-    dev_holding = rugchecker_data.get("devHolding", 100)
+    # Récupération des données RugChecker
+    token_address = "0xYourTokenAddressHere"  # Remplacez par l'adresse de votre token
+    rugchecker_data = get_rugchecker_data(token_address)
+    if not rugchecker_data:
+        return False
+
+    # Vérification des conditions RugChecker
+    dev_holding = rugchecker_data.get("devHolding", 0)
+    top_10_holder_percentage = rugchecker_data.get("top10HolderPercentage", 0)
+    liquidity_locked = rugchecker_data.get("liquidityLocked", 0)
+    token_score = rugchecker_data.get("tokenScore", "")
+
     if dev_holding > 10:
-        conditions_valides = False
+        logging.info("Le pourcentage de détention des développeurs est trop élevé.")
+        return False
+    if top_10_holder_percentage > 20:
+        logging.info("Le pourcentage des 10 premiers détenteurs (hors Dex) est trop élevé.")
+        return False
+    if liquidity_locked < 100:
+        logging.info("La liquidité n'est pas entièrement verrouillée.")
+        return False
+    if token_score != "Good":
+        logging.info("Le score du token n'est pas 'Good'.")
+        return False
 
-    # 5. Vérifier que Dev n'a pas vendu (doit être False ou "no")
-    dev_sold = dexscreener_data.get("devSold", True)
-    if dev_sold:
-        conditions_valides = False
+    logging.info("Toutes les conditions sont respectées.")
+    return True
 
-    # Vous pouvez ajouter ici d'autres vérifications (ex. Dex paid, Top 10 holder, TNX, Liquidity locked, Token score, etc.)
-
-    return conditions_valides
-
-# Boucle principale qui s'exécute en continu
 def main():
-    logging.info("Démarrage du tracker de memecoin en exécution continue...")
-    while True:
-        if check_conditions():
-            # Si toutes les conditions sont strictement remplies, on envoie une notification Telegram.
-            message = "La memecoin respecte toutes les conditions définies."
-            send_telegram_message(message)
-            # Pause de 2 minutes après une alerte
-            time.sleep(120)
-        else:
-            # Si les conditions ne sont pas remplies, aucun message n'est envoyé.
-            logging.info("Les conditions ne sont pas toutes remplies. Aucune notification envoyée.")
-            # Pause courte avant de refaire une vérification (exemple : 60 secondes)
-            time.sleep(60)
+    logging.info("Démarrage du tracker de memecoin...")
+    if check_conditions():
+        logging.info("ALERTE : Ce memecoin respecte toutes les conditions ! 🚀")
+    else:
+        logging.info("Aucune alerte déclenchée.")
 
 if __name__ == "__main__":
     main()
-      
+    
