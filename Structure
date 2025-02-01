@@ -1,0 +1,5 @@
+memecoin-tracker/
+├── README.md
+├── requirements.txt
+├── config.py
+└── main.py
