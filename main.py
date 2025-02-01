@@ -25,7 +25,10 @@ def send_telegram_message(message):
     """Envoie une alerte via Telegram"""
     url = TELEGRAM_API_URL.format(TOKEN=TELEGRAM_BOT_TOKEN)
     payload = {"chat_id": TELEGRAM_CHAT_ID, "text": message}
-    requests.post(url, json=payload)
+    try:
+        requests.post(url, json=payload)
+    except requests.RequestException as e:
+        print(f"Erreur lors de l'envoi Telegram : {e}")
 
 def get_dexscreener_data():
     """Récupère les données Dexscreener avec un User-Agent pour contourner les restrictions"""
@@ -52,13 +55,13 @@ def get_rugchecker_data(token_address):
 
 def check_conditions(pair, rugchecker_data):
     """Vérifie les conditions pour une alerte"""
-    market_cap = pair.get("marketCap", 0)
-    market = pair.get("market", 0)
-    holder = pair.get("holders", 0)
-    volume = pair.get("volume", 0)
+    market_cap = pair.get("marketCap", 0) or 0
+    market = pair.get("market", 0) or 0
+    holder = pair.get("holders", 0) or 0
+    volume = pair.get("volume", 0) or 0
     trending_position = pair.get("trending_rank", 999)  # Supposons que 999 signifie hors du classement
 
-    # Vérifications RugChecker
+    # Vérifications RugChecker avec des valeurs par défaut
     dev_holding = rugchecker_data.get("devHolding", 100)
     top_10_holder = rugchecker_data.get("top10Holder", 100)
     liquidity_locked = rugchecker_data.get("liquidityLocked", 0)
@@ -96,23 +99,23 @@ def main():
                 dex_paid = pair.get("dex_paid", "Inconnu")
                 message = (
                     f"🚨 Nouvelle détection de memecoin 🚨\n"
-                    f"- MarketCap : {pair.get('marketCap')}$\n"
-                    f"- Market : {pair.get('market')}\n"
-                    f"- Holders : {pair.get('holders')}\n"
-                    f"- Volume : {pair.get('volume')}$\n"
-                    f"- Trending sur Dexscreener : #{pair.get('trending_rank')}\n"
-                    f"- Dev Holding : {rugchecker_data.get('devHolding')}%\n"
-                    f"- Top 10 Holder : {rugchecker_data.get('top10Holder')}%\n"
-                    f"- Liquidity Locked : {rugchecker_data.get('liquidityLocked')}%\n"
-                    f"- Token Score : {rugchecker_data.get('tokenScore')}\n"
+                    f"- MarketCap : {pair.get('marketCap', 0)}$\n"
+                    f"- Market : {pair.get('market', 0)}\n"
+                    f"- Holders : {pair.get('holders', 0)}\n"
+                    f"- Volume : {pair.get('volume', 0)}$\n"
+                    f"- Trending sur Dexscreener : #{pair.get('trending_rank', 'Inconnu')}\n"
+                    f"- Dev Holding : {rugchecker_data.get('devHolding', 'Inconnu')}%\n"
+                    f"- Top 10 Holder : {rugchecker_data.get('top10Holder', 'Inconnu')}%\n"
+                    f"- Liquidity Locked : {rugchecker_data.get('liquidityLocked', 'Inconnu')}%\n"
+                    f"- Token Score : {rugchecker_data.get('tokenScore', 'Inconnu')}\n"
                     f"- Dex Paid : {dex_paid}"
                 )
                 send_telegram_message(message)
-                previous_market_cap = pair.get("marketCap", 0)
+                previous_market_cap = pair.get("marketCap", 0) or 0
 
         # Vérification de l'augmentation du MarketCap
         for pair in pairs:
-            market_cap = pair.get("marketCap", 0)
+            market_cap = pair.get("marketCap", 0) or 0
             if market_cap - previous_market_cap >= MARKET_CAP_INCREMENT:
                 message_update = f"🔄 Mise à jour : MarketCap a augmenté de 50k$ ! Nouveau MarketCap : {market_cap}$"
                 send_telegram_message(message_update)
@@ -124,3 +127,4 @@ def main():
 if __name__ == "__main__":
     print("🔍 Démarrage du tracker de memecoins...")
     main()
+        
