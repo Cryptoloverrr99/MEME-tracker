@@ -7,7 +7,7 @@ DEXSCREENER_API_KEY = "https://api.dexscreener.com/tokens/v1/{chainId}/{tokenAdd
 RUGCHECKER_API_KEY = "rugcheck_api.Risk"
 
 # Bubblemap
-BUBBLEMAP_API_KEY = "ta_cle_bubblemap"
+BUBBLEMAP_API_KEY = "https://api.bubblemap.com/check"
 
 # Twitter
 TWITTER_API_KEY = "https://api.twitter.com/2/tweets"
