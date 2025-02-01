@@ -31,14 +31,12 @@ def send_telegram_message(message):
         print(f"Erreur lors de l'envoi Telegram : {e}")
 
 def get_dexscreener_data():
-    """Récupère les données Dexscreener avec un User-Agent pour contourner les restrictions"""
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
-    }
+    """Récupère les données Dexscreener"""
+    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
     try:
         response = requests.get(DEXSCREENER_API_URL, headers=headers)
         response.raise_for_status()
-        return response.json().get("pairs", [])
+        return response.json()  # Correction ici (suppression de .get("pairs"))
     except requests.RequestException as e:
         print(f"Erreur API Dexscreener: {e}")
         return []
@@ -56,12 +54,9 @@ def get_rugchecker_data(token_address):
 def check_conditions(pair, rugchecker_data):
     """Vérifie les conditions pour une alerte"""
     market_cap = pair.get("marketCap", 0) or 0
-    market = pair.get("market", 0) or 0
-    holder = pair.get("holders", 0) or 0
-    volume = pair.get("volume", 0) or 0
-    trending_position = pair.get("trending_rank", 999)  # Supposons que 999 signifie hors du classement
-
-    # Vérifications RugChecker avec des valeurs par défaut
+    trending_position = pair.get("trending_rank", 999)
+    
+    # Valeurs sécurisées avec .get()
     dev_holding = rugchecker_data.get("devHolding", 100)
     top_10_holder = rugchecker_data.get("top10Holder", 100)
     liquidity_locked = rugchecker_data.get("liquidityLocked", 0)
@@ -69,9 +64,9 @@ def check_conditions(pair, rugchecker_data):
 
     return (
         market_cap >= MIN_MARKET_CAP and
-        market >= MIN_MARKET and
-        holder >= MIN_HOLDER and
-        volume >= MIN_VOLUME and
+        pair.get("market", 0) >= MIN_MARKET and
+        pair.get("holders", 0) >= MIN_HOLDER and
+        pair.get("volume", 0) >= MIN_VOLUME and
         trending_position <= 10 and
         dev_holding <= DEV_HOLDING_THRESHOLD and
         top_10_holder <= TOP_10_HOLDER_THRESHOLD and
@@ -84,47 +79,37 @@ def main():
     previous_market_cap = 0
 
     while True:
-        # Récupération des données Dexscreener
         pairs = get_dexscreener_data()
+        
         for pair in pairs:
             token_address = pair.get("tokenAddress")
             if not token_address:
                 continue
 
-            # Récupération des données RugChecker
             rugchecker_data = get_rugchecker_data(token_address)
-
+            
             if check_conditions(pair, rugchecker_data):
-                # Construction du message d'alerte
-                dex_paid = pair.get("dex_paid", "Inconnu")
                 message = (
                     f"🚨 Nouvelle détection de memecoin 🚨\n"
                     f"- MarketCap : {pair.get('marketCap', 0)}$\n"
-                    f"- Market : {pair.get('market', 0)}\n"
                     f"- Holders : {pair.get('holders', 0)}\n"
                     f"- Volume : {pair.get('volume', 0)}$\n"
-                    f"- Trending sur Dexscreener : #{pair.get('trending_rank', 'Inconnu')}\n"
+                    f"- Trending : #{pair.get('trending_rank', 'Inconnu')}\n"
                     f"- Dev Holding : {rugchecker_data.get('devHolding', 'Inconnu')}%\n"
-                    f"- Top 10 Holder : {rugchecker_data.get('top10Holder', 'Inconnu')}%\n"
-                    f"- Liquidity Locked : {rugchecker_data.get('liquidityLocked', 'Inconnu')}%\n"
-                    f"- Token Score : {rugchecker_data.get('tokenScore', 'Inconnu')}\n"
-                    f"- Dex Paid : {dex_paid}"
+                    f"- Top 10 Holder : {rugchecker_data.get('top10Holder', 'Inconnu')}%"
                 )
                 send_telegram_message(message)
-                previous_market_cap = pair.get("marketCap", 0) or 0
+                previous_market_cap = pair.get("marketCap", 0)
 
         # Vérification de l'augmentation du MarketCap
         for pair in pairs:
-            market_cap = pair.get("marketCap", 0) or 0
+            market_cap = pair.get("marketCap", 0)
             if market_cap - previous_market_cap >= MARKET_CAP_INCREMENT:
-                message_update = f"🔄 Mise à jour : MarketCap a augmenté de 50k$ ! Nouveau MarketCap : {market_cap}$"
-                send_telegram_message(message_update)
+                send_telegram_message(f"🔄 MarketCap +50k$ ! Nouveau : {market_cap}$")
                 previous_market_cap = market_cap
 
-        # Pause de 2 minutes
         time.sleep(120)
 
 if __name__ == "__main__":
     print("🔍 Démarrage du tracker de memecoins...")
     main()
-        
