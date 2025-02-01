@@ -1,7 +1,7 @@
 # Configurations API
 
 # Dexscreener
-DEXSCREENER_API_KEY = "https://api.dexscreener.io/latest/dex/tokens"  # si nécessaire, sinon laisse vide
+DEXSCREENER_API_KEY = "https://api.dexscreener.com/token-boosts/latest/v1"  # si nécessaire, sinon laisse vide
 
 # RugChecker
 RUGCHECKER_API_KEY = "https://rugcheck_api.Risk"
