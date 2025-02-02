@@ -1,5 +1,6 @@
 import time
 import requests
+from models import TokenPair  # Importation du modèle TokenPair depuis models.py
 
 # API URLs
 DEXSCREENER_API_URL = "https://api.dexscreener.com/latest/dex/tokens"
@@ -95,6 +96,14 @@ def main():
 
                 # Vérification des conditions Solscan
                 if check_solscan_conditions(solscan_data):
+                    # Utilisation de TokenPair pour parser les données et récupérer le temps de création
+                    try:
+                        token_pair = TokenPair(**pair)
+                        pair_created_at = token_pair.pair_created_at if token_pair.pair_created_at else "Inconnu"
+                    except Exception as e:
+                        print(f"Erreur lors du parsing TokenPair: {e}")
+                        pair_created_at = "Inconnu"
+                    
                     # Construction du message d'alerte
                     message = (
                         f"🚨 Nouvelle détection de memecoin 🚨\n"
@@ -105,14 +114,14 @@ def main():
                         f"- Top 10 Holder : {solscan_data.get('top10Holder', 'Inconnu')}%\n"
                         f"- Dev Sold > 1% (premières 10 minutes) : Non\n"
                         f"- Holders : {pair.get('holders')}\n"
-                        f"- Volume : {pair.get('volume')}$"
+                        f"- Volume : {pair.get('volume')}$\n"
+                        f"- Pair Created At : {pair_created_at}"
                     )
                     send_telegram_message(message)
 
                     # Vérification de l'augmentation du MarketCap
                     current_market_cap = pair.get("marketCap", 0)
                     previous_market_cap = previous_market_caps.get(token_address, 0)
-
                     if current_market_cap - previous_market_cap >= MARKET_CAP_INCREMENT:
                         message_update = (
                             f"🔄 Mise à jour : MarketCap a augmenté de 50k$ pour {token_address} ! "
@@ -127,4 +136,3 @@ def main():
 if __name__ == "__main__":
     print("🔍 Démarrage du tracker de memecoins...")
     main()
-    
